@@ -24,32 +24,27 @@ def generar_codigo_sala() -> str:
         if codigo not in partidas:
             return codigo
 
-# --- RUTAS DE NAVEGACIÓN ---
+# --- RUTAS DE NAVEGACIÓN CORREGIDAS ---
 
 @app.get("/")
 async def get_lobby(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    # Pasamos el parámetro request explícitamente como argumento de la función
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html"
+    )
 
 @app.get("/play/{codigo}/{username}")
 async def get_game(request: Request, codigo: str, username: str):
-    return templates.TemplateResponse("game.html", {
-        "request": request, 
-        "codigo": codigo, 
-        "username": username
-    })
-
-@app.post("/crear-sala")
-async def crear_sala():
-    codigo = generar_codigo_sala()
-    partidas[codigo] = {
-        "jugadores": [],
-        "nombres": [],
-        "turno_index": 0,   # 0 para el creador, 1 para el invitado
-        "lineas": {},       # Guarda id_linea: "azul"|"rojo"
-        "puntos": [0, 0]    # Puntos de [Jugador 1, Jugador 2]
-    }
-    return {"codigo": codigo}
-
+    # Pasamos request directamente y cualquier otra variable dentro del diccionario context
+    return templates.TemplateResponse(
+        request=request,
+        name="game.html",
+        context={
+            "codigo": codigo,
+            "username": username
+        }
+    )
 # --- COMUNICACIÓN EN TIEMPO REAL (WEBSOCKET) ---
 
 @app.websocket("/ws/{codigo}/{username}")
