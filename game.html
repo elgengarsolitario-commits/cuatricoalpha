@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuatrico 3D - En Partida</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Rajdhani', sans-serif; background-color: #020617; margin: 0; overflow: hidden; }
+        .neon-text-blue { text-shadow: 0 0 10px #3b82f6, 0 0 20px #1d4ed8; }
+        .neon-text-red { text-shadow: 0 0 10px #ef4444, 0 0 20px #b91c1c; }
+    </style>
+</head>
+<body class="relative w-screen h-screen">
+
+    <div class="absolute top-4 left-0 right-0 z-10 flex justify-between items-center px-6 pointer-events-none">
+        <div class="bg-slate-900/90 border border-blue-500/30 p-4 rounded-xl text-blue-400 neon-text-blue pointer-events-auto">
+            <h3 class="text-xs uppercase tracking-wider">Creador (Azul)</h3>
+            <p class="text-3xl font-black font-mono" id="pts-azul">0</p>
+        </div>
+
+        <div class="bg-slate-950/95 border border-slate-800 px-6 py-3 rounded-full text-center pointer-events-auto">
+            <span id="turno-indicador" class="text-lg font-bold tracking-widest uppercase animate-pulse text-amber-400">Esperando Oponente...</span>
+        </div>
+
+        <div class="bg-slate-900/90 border border-red-500/30 p-4 rounded-xl text-red-400 neon-text-red pointer-events-auto">
+            <h3 class="text-xs uppercase tracking-wider">Invitado (Rojo)</h3>
+            <p class="text-3xl font-black font-mono" id="pts-rojo">0</p>
+        </div>
+    </div>
+
+    <div id="canvas-container" class="w-full h-full"></div>
+
+    <script>
+        // --- 1. DATOS DE LA PARTIDA ---
+        const urlParts = window.location.pathname.split('/');
+        const codigoSala = urlParts[2];
+        const miNombre = urlParts[3];
+        
+        let esMiTurno = false;
+        let miColorNum = 0; // 0 para creador (Azul), 1 para invitado (Rojo)
+
+        // --- 2. CONFIGURACIÓN DEL CANVAS 3D ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020617);
+        scene.fog = new THREE.FogExp2(0x020617, 0.04);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 9, 11);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+        // Luces
+        scene.add(new THREE.AmbientLight(0x1e293b, 1.5));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 15, 5);
+        scene.add(dirLight);
+
+        // --- 3. GEOMETRÍA DE LA CRUZ ESCALONADA (N=4) ---
+        const N = 4;
+        const gridOffset = N - 1;
+
+        function esPuntoValido(x, z) {
+            return (Math.abs(x) + Math.abs(z)) <= (N - 1);
+        }
+
+        // Dibujar Nodos del Tablero
+        const nodeGeometry = new THREE.SphereGeometry(0.12, 16, 16);
+        const nodeMaterial = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.2, metalness: 0.8 });
+        const puntosValidos = [];
+
+        for (let x = -gridOffset; x <= gridOffset; x++) {
+            for (let z = -gridOffset; z <= gridOffset; z++) {
+                if (esPuntoValido(x, z)) {
+                    puntosValidos.push({ x, z });
+                    const nodeMesh = new THREE.Mesh(nodeGeometry, nodeMaterial);
+                    nodeMesh.position.set(x * 2, 0, z * 2);
+                    scene.add(nodeMesh);
+                }
+            }
+        }
+
+        // --- 4. CREAR LAS ARISTAS/LÍNEAS SELECCIONABLES ---
+        const lineasMap = {}; // Mapa para buscar objetos Three.js rápidamente por ID de línea
+        const aristasInteractivos = [];
+        const aristaLibreMat = new THREE.MeshBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.3 });
+
+        function crearArista3D(x1, z1, x2, z2) {
+            const posX = x1 + x2;
+            const posZ = z1 + z2;
+            const esHorizontal = (z1 === z2);
+            
+            const geom = new THREE.CylinderGeometry(0.06, 0.06, 1.8, 8);
+            const mesh = new THREE.Mesh(geom, aristaLibreMat.clone());
+            mesh.position.set(posX, 0, posZ);
+            
+            if (esHorizontal) {
+                mesh.rotation.z = Math.PI / 2;
+            } else {
+                mesh.rotation.x = Math.PI / 2;
+            }
+
+            // Ordenamos la ID para que siempre coincida sin importar quién clica
+            const id = `L_${Math.min(x1,x2)}_${Math.min(z1,z2)}_${Math.max(x1,x2)}_${Math.max(z1,z2)}`;
+            mesh.userData = { id: id, estado: "libre", x1, z1, x2, z2 };
+
+            scene.add(mesh);
+            aristasInteractivos.push(mesh);
+            lineasMap[id] = mesh;
+        }
+
+        // Generar conexiones entre vecinos válidos de distancia Manhattan 1
+        for (let i = 0; i < puntosValidos.length; i++) {
+            for (let j = i + 1; j < puntosValidos.length; j++) {
+                const p1 = puntosValidos[i];
+                const p2 = puntosValidos[j];
+                if (Math.abs(p1.x - p2.x) + Math.abs(p1.z - p2.z) === 1) {
+                    crearArista3D(p1.x, p1.z, p2.x, p2.z);
+                }
+            }
+        }
+
+        // --- 5. LÓGICA DE DETECCIÓN DE CUADRADOS CERRADOS ---
+        // Un cuadrado de 1x1 se identifica por su esquina superior izquierda (x, z)
+        function checkCuadradoCerrado(x, z) {
+            // Un cuadro en (x,z) necesita:
+            // Superior: (x, z) a (x+1, z)
+            // Inferior: (x, z+1) a (x+1, z+1)
+            // Izquierda: (x, z) a (x, z+1)
+            // Derecha: (x+1, z) a (x+1, z+1)
+            const lSup = `L_${x}_${z}_${x+1}_${z}`;
+            const lInf = `L_${x}_${z+1}_${x+1}_${z+1}`;
+            const lIzq = `L_${x}_${z}_${x}_${z+1}`;
+            const lDer = `L_${x+1}_${z}_${x+1}_${z+1}`;
+
+            const mSup = lineasMap[lSup];
+            const mInf = lineasMap[lInf];
+            const mIzq = lineasMap[lIzq];
+            const mDer = lineasMap[lDer];
+
+            // Si existen las 4 líneas físicas y todas han sido reclamadas
+            if (mSup && mInf && mIzq && mDer) {
+                if (mSup.userData.estado !== "libre" &&
+                    mInf.userData.estado !== "libre" &&
+                    mIzq.userData.estado !== "libre" &&
+                    mDer.userData.estado !== "libre") {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        const cuadradosConquistados = {}; // "x_z": true
+
+        function reevaluarNuevosPuntos() {
+            let nuevosPuntos = 0;
+            // Evaluamos todos los posibles centros de celdas 1x1
+            for (let x = -gridOffset; x < gridOffset; x++) {
+                for (let z = -gridOffset; z < gridOffset; z++) {
+                    const key = `${x}_${z}`;
+                    if (!cuadradosConquistados[key]) {
+                        if (checkCuadradoCerrado(x, z)) {
+                            cuadradosConquistados[key] = true;
+                            nuevosPuntos++;
+                            crearEfectoCuadrado3D(x, z);
+                        }
+                    }
+                }
+            }
+            return nuevosPuntos;
+        }
+
+        function crearEfectoCuadrado3D(x, z) {
+            // Crear plano neón en el centro del cuadrado conquistado
+            const planeGeom = new THREE.BoxGeometry(1.7, 0.02, 1.7);
+            const colorNeon = (miColorNum === 0 && esMiTurno) || (miColorNum === 1 && !esMiTurno) ? 0x3b82f6 : 0xef4444;
+            const planeMat = new THREE.MeshStandardMaterial({
+                color: colorNeon,
+                emissive: colorNeon,
+                emissiveIntensity: 0.6,
+                roughness: 0.1
+            });
+            const plane = new THREE.Mesh(planeGeom, planeMat);
+            // El centro del cuadrado es (x + 0.5) y (z + 0.5), escalado por 2
+            plane.position.set((x * 2) + 1, 0.01, (z * 2) + 1);
+            scene.add(plane);
+        }
+
+        // --- 6. RAYCASTING PARA CLIC INTERACTIVO ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let hoveredMesh = null;
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        window.addEventListener('click', () => {
+            if (!esMiTurno || !hoveredMesh || hoveredMesh.userData.estado !== "libre") return;
+
+            // Simular localmente la jugada antes de enviarla
+            const id = hoveredMesh.userData.id;
+            
+            // Pintamos la línea temporalmente para calcular si se cerró un cuadrito
+            hoveredMesh.userData.estado = "ocupada"; 
+            const puntos_ganados = reevaluarNuevosPuntos();
+            
+            // Devolvemos el estado temporal para que el servidor lo sincronice oficialmente
+            hoveredMesh.userData.estado = "libre"; 
+
+            // Enviar jugada al servidor FastAPI
+            ws.sendJSON({
+                "tipo": "JUGADA",
+                "linea_id": id,
+                "puntos_ganados": puntos_ganados
+            });
+        });
+
+        // --- 7. CONEXIÓN POR WEBSOCKET (MULTIJUGADOR EN TIEMPO REAL) ---
+        const protocolo = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(`${protocolo}//${window.location.host}/ws/${codigoSala}/${miNombre}`);
+        
+        ws.sendJSON = function(obj) { this.send(JSON.stringify(obj)); };
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.tipo === "SALA_ESTADO") {
+                // El primer jugador en la lista de nombres de la sala es el Creador (Azul)
+                miColorNum = msg.jugadores[0] === miNombre ? 0 : 1;
+                document.getElementById('turno-indicador').innerText = msg.listo ? "¡Partida Iniciada!" : "Esperando rival...";
+            }
+
+            if (msg.tipo === "TABLERO_ACTUALIZAR") {
+                // Actualizar línea visualmente con su color definitivo de neón
+                const mesh = lineasMap[msg.linea_id];
+                if (mesh) {
+                    const colorHex = msg.color === "azul" ? 0x3b82f6 : 0xef4444;
+                    mesh.material.color.setHex(colorHex);
+                    mesh.material.opacity = 0.95;
+                    mesh.userData.estado = msg.color;
+                }
+
+                // Evaluar cierres de cuadritos tras actualizar
+                reevaluarNuevosPuntos();
+
+                // Actualizar HUD
+                document.getElementById('pts-azul').innerText = msg.puntos[0];
+                document.getElementById('pts-rojo').innerText = msg.puntos[1];
+
+                // Actualizar el turno
+                esMiTurno = (msg.turno_index === miColorNum);
+                const indicador = document.getElementById('turno-indicador');
+                if (esMiTurno) {
+                    indicador.innerText = "⭐ ¡TU TURNO! ⭐";
+                    indicador.className = "text-lg font-bold tracking-widest uppercase animate-pulse text-amber-400";
+                } else {
+                    indicador.innerText = "Turno del Rival...";
+                    indicador.className = "text-md font-bold tracking-widest uppercase text-slate-500";
+                }
+            }
+        };
+
+        // --- 8. CICLO DE RENDERIZACIÓN ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Resaltar arista apuntada (Hover)
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(aristasInteractivos);
+
+            if (esMiTurno && intersects.length > 0) {
+                const target = intersects[0].object;
+                if (target.userData.estado === "libre") {
+                    if (hoveredMesh && hoveredMesh !== target) {
+                        hoveredMesh.material.color.setHex(0x334155);
+                        hoveredMesh.material.opacity = 0.3;
+                    }
+                    hoveredMesh = target;
+                    // Previsualización en color cian brillante si es tu turno
+                    hoveredMesh.material.color.setHex(0x22d3ee);
+                    hoveredMesh.material.opacity = 0.7;
+                }
+            } else {
+                if (hoveredMesh) {
+                    if (hoveredMesh.userData.estado === "libre") {
+                        hoveredMesh.material.color.setHex(0x334155);
+                        hoveredMesh.material.opacity = 0.3;
+                    }
+                    hoveredMesh = null;
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Ajustar ventana responsiva
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

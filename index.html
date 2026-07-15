@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuatrico - ¡El Juego de la Cruz!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: radial-gradient(circle, #0f172a 0%, #020617 100%);
+        }
+        .title-neon {
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 10px #3b82f6, 0 0 40px #1d4ed8;
+        }
+        .neon-border-blue {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center text-white p-4">
+
+    <div id="lobby" class="w-full max-w-md bg-slate-900/90 p-8 rounded-2xl border border-slate-800 text-center neon-border-blue transition-all">
+        
+        <h1 class="text-6xl font-black tracking-widest text-blue-400 title-neon mb-2 animate-pulse">CUATRICO</h1>
+        <p class="text-slate-400 text-xs tracking-widest uppercase mb-8">El Desafío de la Cruz Escalonada</p>
+
+        <div id="login-section" class="mb-8">
+            <p class="text-slate-300 mb-4 text-sm">Inicia sesión con Google para jugar multijugador</p>
+            <button id="btn-google-login" class="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-bold py-3 px-6 rounded-lg hover:bg-slate-100 transition-all shadow-lg transform hover:scale-[1.01]">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_\"G\"_Logo.svg" class="w-5 h-5" alt="Google">
+                Entrar con Google
+            </button>
+        </div>
+
+        <div id="profile-section" class="hidden mb-6 border-b border-slate-800 pb-6">
+            <div class="flex items-center gap-4 justify-center">
+                <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=CuatricoPlayer" class="w-14 h-14 rounded-full border-2 border-blue-500" alt="Avatar">
+                <div class="text-left">
+                    <h2 id="username-display" class="font-bold text-xl text-blue-300">Jugador_Estrella</h2>
+                    <p class="text-xs text-emerald-400 font-semibold">⚡ 150 PUNTOS</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="menu-options" class="opacity-40 pointer-events-none transition-all duration-300 space-y-4">
+            <button id="btn-solitario" class="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 font-bold text-lg py-4 rounded-xl shadow-md">
+                🎮 Jugar Contra la IA
+            </button>
+
+            <div class="flex items-center my-4">
+                <div class="flex-grow h-px bg-slate-800"></div>
+                <span class="px-3 text-[10px] text-slate-500 tracking-wider">MULTIJUGADOR ONLINE</span>
+                <div class="flex-grow h-px bg-slate-800"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button id="btn-crear-sala" class="bg-emerald-600 hover:bg-emerald-500 font-bold py-3 px-4 rounded-xl transition-all">
+                    🔑 Crear Código
+                </button>
+                <button id="btn-unirse-sala" class="bg-indigo-600 hover:bg-indigo-500 font-bold py-3 px-4 rounded-xl transition-all">
+                    🚪 Entrar Código
+                </button>
+            </div>
+        </div>
+
+        <div id="lobby-sala" class="hidden mt-6 pt-6 border-t border-slate-800 space-y-4">
+            <div id="crear-sala-view" class="hidden">
+                <p class="text-slate-400 text-sm">Comparte este código de 6 cifras con tu rival:</p>
+                <div id="codigo-generado" class="text-4xl font-mono font-black text-amber-400 tracking-widest my-3">------</div>
+                <p class="text-xs text-blue-400 animate-pulse">Esperando rival... ¡No cierres esta pestaña!</p>
+            </div>
+
+            <div id="unirse-sala-view" class="hidden">
+                <p class="text-slate-400 text-sm mb-2">Introduce el código del rival:</p>
+                <input id="input-codigo" type="text" maxlength="6" placeholder="CÓDIGO" class="w-full bg-slate-950 border border-slate-700 text-center text-2xl font-mono uppercase font-bold py-2 rounded-lg text-amber-400 focus:outline-none focus:border-amber-400 tracking-widest">
+                <button id="btn-conectar" class="w-full mt-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl">
+                    ¡CONECTARSE YA!
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let miUsuario = "Jugador_" + Math.floor(Math.random() * 9000 + 1000);
+
+        document.getElementById('btn-google-login').addEventListener('click', () => {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('profile-section').classList.remove('hidden');
+            document.getElementById('username-display').innerText = miUsuario;
+            document.getElementById('menu-options').classList.remove('opacity-40', 'pointer-events-none');
+        });
+
+        // Crear Sala interactuando con FastAPI
+        document.getElementById('btn-crear-sala').addEventListener('click', async () => {
+            document.getElementById('lobby-sala').classList.remove('hidden');
+            document.getElementById('crear-sala-view').classList.remove('hidden');
+            document.getElementById('unirse-sala-view').classList.add('hidden');
+
+            const res = await fetch('/crear-sala', { method: 'POST' });
+            const data = await res.json();
+            const codigo = data.codigo;
+            document.getElementById('codigo-generado').innerText = codigo;
+
+            // Abrir WebSocket para esperar al oponente en segundo plano
+            const protocolo = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const ws = new WebSocket(`${protocolo}//${window.location.host}/ws/${codigo}/${miUsuario}`);
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.tipo === "SALA_ESTADO" && msg.listo) {
+                    // Si el rival se une, vamos directos a jugar
+                    window.location.href = `/play/${codigo}/${miUsuario}`;
+                }
+            };
+        });
+
+        document.getElementById('btn-unirse-sala').addEventListener('click', () => {
+            document.getElementById('lobby-sala').classList.remove('hidden');
+            document.getElementById('unirse-sala-view').classList.remove('hidden');
+            document.getElementById('crear-sala-view').classList.add('hidden');
+        });
+
+        document.getElementById('btn-conectar').addEventListener('click', () => {
+            const codigo = document.getElementById('input-codigo').value.trim().toUpperCase();
+            if (codigo.length === 6) {
+                window.location.href = `/play/${codigo}/${miUsuario}`;
+            }
+        });
+        
+        document.getElementById('btn-solitario').addEventListener('click', () => {
+            alert("¡El modo IA se lanzará en la siguiente actualización! Por ahora, disfruta el Multijugador Real con tus amigos.");
+        });
+    </script>
+</body>
+</html>
