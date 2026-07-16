@@ -3,177 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cuatrico - Lobby</title>
+    <title>Lobby - Cuatrico</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
         body {
-            background-color: #0b0e14;
-            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+            background-color: #1e1e2e;
+            color: #cdd6f4;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            overflow: hidden;
+            margin: 0;
         }
-
-        .container {
-            background: #151a24;
-            padding: 2.5rem;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            width: 100%;
-            max-width: 420px;
+        .lobby-container {
+            background-color: #313244;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
             text-align: center;
-            border: 1px solid #1f2836;
+            width: 350px;
         }
-
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            color: #00ffcc;
-            text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
-            letter-spacing: 2px;
+            color: #89b4fa;
+            margin-bottom: 25px;
         }
-
-        .subtitle {
-            font-size: 0.9rem;
-            color: #8a99ad;
-            margin-bottom: 2rem;
-        }
-
-        .input-group {
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-
-        label {
-            display: block;
-            font-size: 0.85rem;
-            color: #00ffcc;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
         input {
-            width: 100%;
-            padding: 0.85rem 1rem;
-            border-radius: 8px;
-            border: 2px solid #243042;
-            background: #0b0e14;
-            color: #ffffff;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #00ffcc;
-            box-shadow: 0 0 8px rgba(0, 255, 204, 0.2);
-        }
-
-        .btn-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 1rem;
-            border-radius: 8px;
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
             border: none;
-            font-size: 1rem;
+            border-radius: 6px;
+            background-color: #45475a;
+            color: #cdd6f4;
+            font-size: 16px;
+            text-align: center;
+        }
+        input:focus {
+            outline: 2px solid #89b4fa;
+        }
+        button {
+            width: 95%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
+            transition: background 0.2s;
         }
-
-        .btn-green {
-            background: #00cc88;
-            color: #0b0e14;
-            box-shadow: 0 4px 15px rgba(0, 204, 136, 0.3);
+        .btn-create {
+            background-color: #a6e3a1;
+            color: #11111b;
         }
-
-        .btn-green:hover {
-            background: #00ffaa;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 255, 170, 0.4);
+        .btn-create:hover {
+            background-color: #94e2d5;
         }
-
-        .btn-purple {
-            background: #6c5ce7;
-            color: #ffffff;
-            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+        .btn-join {
+            background-color: #89b4fa;
+            color: #11111b;
         }
-
-        .btn-purple:hover {
-            background: #8073f3;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(128, 115, 243, 0.4);
+        .btn-join:hover {
+            background-color: #74c7ec;
+        }
+        .divider {
+            margin: 15px 0;
+            color: #7f849c;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>CUATRICO</h1>
-        <div class="subtitle">Tablero 3D - Multijugador Real</div>
+<div class="lobby-container">
+    <h1>🎮 Cuatrico</h1>
+    
+    <input type="text" id="username" placeholder="Tu Nombre de Usuario" required>
+    
+    <hr style="border: 0.5px solid #45475a; margin: 20px 0;">
 
-        <div class="input-group">
-            <label for="usernameInput">Mi Nickname</label>
-            <input type="text" id="usernameInput" placeholder="Escribe tu nombre de jugador..." />
-        </div>
+    <button class="btn-create" onclick="crearSala()">✨ Crear Nueva Partida</button>
 
-        <div class="input-group">
-            <label for="roomCodeInput">Código de Sala Compartido</label>
-            <input type="text" id="roomCodeInput" placeholder="Ej: SALA77, PRO, 1234..." />
-        </div>
+    <div class="divider">ó unirse a una existente:</div>
 
-        <div class="btn-container">
-            <button class="btn btn-green" onclick="conectarJuego()">¡Jugar Multijugador!</button>
-            <button class="btn btn-purple" onclick="alert('¡El modo IA está en desarrollo! Disfruta del modo multijugador real.')">Jugar contra la IA</button>
-        </div>
-    </div>
+    <input type="text" id="codigo-sala" placeholder="Código de la Sala (ej. AX39B)">
+    <button class="btn-join" onclick="unirseSala()">🔌 Unirse a Partida</button>
+</div>
 
-    <script>
-        // Cargar nickname guardado previamente si existe
-        if (localStorage.getItem("username")) {
-            document.getElementById("usernameInput").value = localStorage.getItem("username");
-        } else {
-            // Si no existe, generamos un nombre por defecto
-            const randomID = Math.floor(1000 + Math.random() * 9000);
-            document.getElementById("usernameInput").value = "Jugador_" + randomID;
+<script>
+    // Generar un código aleatorio para la sala
+    function generarCodigo(longitud = 5) {
+        const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let resultado = '';
+        for (let i = 0; i < longitud; i++) {
+            resultado += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+        }
+        return resultado;
+    }
+
+    function obtenerUsername() {
+        const username = document.getElementById('username').value.trim();
+        if (!username) {
+            alert("Por favor, ingresa un nombre de usuario primero.");
+            return null;
+        }
+        return username;
+    }
+
+    function crearSala() {
+        const username = obtenerUsername();
+        if (!username) return;
+
+        const codigoNuevo = generarCodigo();
+        // Redirige al creador a la sala de espera con su código generado
+        window.location.href = `/play/${codigoNuevo}/${username}`;
+    }
+
+    function unirseSala() {
+        const username = obtenerUsername();
+        if (!username) return;
+
+        const codigoInput = document.getElementById('codigo-sala').value.trim().toUpperCase();
+        if (!codigoInput) {
+            alert("Por favor, introduce el código de la sala de tu rival.");
+            return;
         }
 
-        function conectarJuego() {
-            const username = document.getElementById("usernameInput").value.trim();
-            const codigo = document.getElementById("roomCodeInput").value.trim().toUpperCase();
+        // Redirige al invitado a la sala usando el código ingresado
+        window.location.href = `/play/${codigoInput}/${username}`;
+    }
+</script>
 
-            if (!username) {
-                alert("Por favor, ingresa un nickname.");
-                return;
-            }
-
-            if (!codigo) {
-                alert("Por favor, escribe un código de sala para jugar con tu amigo.");
-                return;
-            }
-
-            // Guardamos el nickname para futuras partidas
-            localStorage.setItem("username", username);
-
-            // Redirigimos a la ruta del juego
-            window.location.href = `/play/${codigo}/${username}`;
-        }
-    </script>
 </body>
 </html>
