@@ -37,10 +37,12 @@ Base.metadata.create_all(bind=engine)
 # ==========================================
 # 🎮 GESTIÓN DE SALAS DE JUEGO
 # ==========================================
+# Estructura: { "codigo_sala": [websocket1, websocket2] }
 salas: dict[str, list[WebSocket]] = {}
 
 @app.get("/")
 async def get_lobby(request: Request):
+    # Solución definitiva para evitar el error de Jinja2 pasándole explícitamente el request
     return templates.TemplateResponse(
         request=request,
         name="index.html"
@@ -59,6 +61,7 @@ async def get_game(request: Request, codigo: str, username: str):
     puntos_actuales = jugador.puntos
     db.close()
 
+    # Devolvemos la plantilla usando la sintaxis compatible más estricta
     return templates.TemplateResponse(
         request=request,
         name="game.html",
@@ -73,9 +76,11 @@ async def get_game(request: Request, codigo: str, username: str):
 async def websocket_endpoint(websocket: WebSocket, codigo: str, username: str):
     await websocket.accept()
     
+    # Aseguramos que el código de la sala esté registrado (usando el código que escribió el usuario)
     if codigo not in salas:
         salas[codigo] = []
     
+    # Validamos que no entren más de 2 personas a la misma sala
     if len(salas[codigo]) >= 2:
         await websocket.send_text(json.dumps({
             "type": "error", 
@@ -84,10 +89,12 @@ async def websocket_endpoint(websocket: WebSocket, codigo: str, username: str):
         await websocket.close()
         return
 
+    # Añadimos la conexión del jugador a la sala
     salas[codigo].append(websocket)
     print(f"Jugador {username} conectado a la sala '{codigo}'")
 
     try:
+        # Si ya se unieron los 2 jugadores, les mandamos la señal de inicio de partida
         if len(salas[codigo]) == 2:
             for index, ws in enumerate(salas[codigo]):
                 es_creador = (index == 0)
@@ -96,12 +103,13 @@ async def websocket_endpoint(websocket: WebSocket, codigo: str, username: str):
                     "rol": "creador" if es_creador else "invitado"
                 }))
 
+        # Escuchamos los movimientos del juego continuamente
         while True:
             data = await websocket.receive_text()
-            # En caso de que se envíe una señal de fin de juego, podemos actualizar los puntos en Neon
             mensaje = json.loads(data)
+            
+            # En caso de que se envíe una señal de fin de juego, sumamos los puntos en la DB
             if mensaje.get("type") == "victory":
-                # Guardamos la victoria sumando puntos al ganador en base de datos
                 db = SessionLocal()
                 jugador = db.query(Jugador).filter(Jugador.username == username).first()
                 if jugador:
@@ -115,12 +123,13 @@ async def websocket_endpoint(websocket: WebSocket, codigo: str, username: str):
                     await cliente.send_text(data)
 
     except WebSocketDisconnect:
+        # Manejamos la salida de un jugador de la sala
         if codigo in salas and websocket in salas[codigo]:
             salas[codigo].remove(websocket)
             for cliente in salas[codigo]:
                 await cliente.send_text(json.dumps({
                     "type": "disconnection", 
-                    "message": "Tu rival se ha desconectado."
+                    "message": "Tu rival se ha desconectado de la partida."
                 }))
             if not salas[codigo]:
                 del salas[codigo]
