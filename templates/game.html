@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #1e1e2e;
+            background-color: #1a1b26;
             color: #cdd6f4;
             display: flex;
             flex-direction: column;
@@ -15,129 +15,243 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            overflow: hidden;
+            position: relative;
         }
-        .header {
+
+        /* Marcadores y Código de Sala superior */
+        .game-header {
+            position: absolute;
+            top: 20px;
+            width: 90%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .player-card {
+            background-color: rgba(49, 50, 68, 0.75);
+            border: 2px solid #45475a;
+            border-radius: 12px;
+            padding: 15px 25px;
             text-align: center;
-            margin-bottom: 20px;
+            width: 140px;
+            backdrop-filter: blur(5px);
         }
-        h1 {
-            color: #89b4fa;
-            margin: 5px 0;
+
+        .player-card.azul {
+            border-color: #89b4fa;
+            box-shadow: 0 0 15px rgba(137, 180, 250, 0.3);
         }
-        .code-box {
-            background-color: #313244;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 18px;
-            color: #f9e2af;
-            border: 1px dashed #f9e2af;
-            display: inline-block;
-            margin-top: 5px;
+
+        .player-card.rojo {
+            border-color: #f38ba8;
+            box-shadow: 0 0 15px rgba(243, 139, 168, 0.3);
         }
-        .status-container {
-            margin: 15px 0;
-            font-size: 18px;
+
+        .player-name {
+            font-size: 16px;
             font-weight: bold;
-            color: #a6e3a1;
+            display: block;
+            margin-bottom: 5px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .score {
+            font-size: 32px;
+            font-weight: 900;
+        }
+
+        .azul .score { color: #89b4fa; }
+        .rojo .score { color: #f38ba8; }
+
+        .middle-info {
             text-align: center;
-            min-height: 27px;
         }
-        /* Tablero de Cuatrico (6 filas x 7 columnas) */
-        .board-container {
-            background-color: #2a2b3d;
-            padding: 15px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            display: inline-block;
+
+        .room-code-tag {
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: #a6adc8;
+            display: block;
+            margin-bottom: 5px;
         }
-        .board {
-            display: grid;
-            grid-template-columns: repeat(7, 60px);
-            grid-template-rows: repeat(6, 60px);
-            gap: 10px;
-            background-color: #1e1e2e;
-            padding: 10px;
+
+        .room-code-value {
+            font-family: monospace;
+            font-size: 24px;
+            font-weight: bold;
+            color: #f9e2af;
+            background-color: rgba(49, 50, 68, 0.5);
+            padding: 5px 15px;
             border-radius: 8px;
+            border: 1px dashed #f9e2af;
         }
+
+        /* Mensaje de Estado / Turno */
+        .status-box {
+            position: absolute;
+            top: 130px;
+            background: rgba(49, 50, 68, 0.9);
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1.5px;
+            color: #f9e2af;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            z-index: 10;
+        }
+
+        /* PERSPECTIVA Y ENTORNO DEL TABLERO */
+        .scene {
+            perspective: 800px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 80px;
+        }
+
+        /* El tablero en inclinación isométrica similar al tuyo */
+        .board-3d {
+            transform: rotateX(45deg) rotateZ(0deg);
+            transform-style: preserve-3d;
+            background-color: rgba(30, 30, 46, 0.85);
+            border: 4px solid #313244;
+            border-radius: 16px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(7, 50px);
+            grid-template-rows: repeat(6, 50px);
+            gap: 15px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* Celdas / Nodos interconectados */
         .cell {
-            background-color: #313244;
+            background-color: rgba(49, 50, 68, 0.6);
             border-radius: 50%;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+
+        /* Líneas conectoras simuladas por detrás (Efecto de red) */
+        .cell::before {
+            content: "";
+            position: absolute;
+            width: 200%;
+            height: 2px;
+            background: rgba(69, 71, 90, 0.35);
+            z-index: -1;
+            transform: translateZ(-2px);
+        }
+
+        .cell::after {
+            content: "";
+            position: absolute;
+            width: 2px;
+            height: 200%;
+            background: rgba(69, 71, 90, 0.35);
+            z-index: -1;
+            transform: translateZ(-2px);
+        }
+
         .cell:hover {
-            transform: scale(1.05);
-            background-color: #45475a;
+            background-color: rgba(137, 180, 250, 0.25);
+            box-shadow: 0 0 10px rgba(137, 180, 250, 0.5);
         }
-        /* Fichas de los jugadores */
+
+        /* Animaciones para las fichas que caen */
         .cell.player-1 {
-            background-color: #f38ba8; /* Ficha Roja */
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            background-color: #89b4fa; /* Color Azul */
+            box-shadow: 0 0 15px #89b4fa, inset 0 0 10px rgba(0, 0, 0, 0.5);
+            transform: translateZ(10px);
         }
+
         .cell.player-2 {
-            background-color: #f9e2af; /* Ficha Amarilla */
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            background-color: #f38ba8; /* Color Rojo */
+            box-shadow: 0 0 15px #f38ba8, inset 0 0 10px rgba(0, 0, 0, 0.5);
+            transform: translateZ(10px);
         }
-        .btn-lobby {
-            margin-top: 25px;
-            background-color: #f38ba8;
-            color: #11111b;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+
+        /* Botón de salida */
+        .btn-exit {
+            position: absolute;
+            bottom: 30px;
+            background-color: #313244;
+            color: #cdd6f4;
+            border: 1px solid #45475a;
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             text-decoration: none;
             transition: background 0.2s;
         }
-        .btn-lobby:hover {
-            background-color: #e06c75;
+
+        .btn-exit:hover {
+            background-color: #f38ba8;
+            color: #11111b;
         }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <h1>🎮 Cuatrico en Línea</h1>
-    <p>Jugando como: <strong style="color: #a6e3a1;">{{ username }}</strong></p>
-    <div>
-        <span>Código de la Sala:</span>
-        <div class="code-box" id="room-code">{{ codigo }}</div>
+<div class="game-header">
+    <div class="player-card azul">
+        <span class="player-name" id="p1-name">CREADOR (AZUL)</span>
+        <div class="score" id="p1-score">0</div>
+    </div>
+
+    <div class="middle-info">
+        <span class="room-code-tag">CÓDIGO DE LA PARTIDA</span>
+        <span class="room-code-value" id="room-code">{{ codigo }}</span>
+    </div>
+
+    <div class="player-card rojo">
+        <span class="player-name" id="p2-name">INVITADO (ROJO)</span>
+        <div class="score" id="p2-score">0</div>
     </div>
 </div>
 
-<div class="status-container" id="status-message">
-    ⌛ Esperando a que se una el oponente...
+<div class="status-box" id="status-message">
+    ESPERANDO OPONENTE...
 </div>
 
-<div class="board-container">
-    <div class="board" id="game-board">
+<div class="scene">
+    <div class="board-3d" id="board">
         </div>
 </div>
 
-<a href="/" class="btn-lobby">🚪 Salir al Lobby</a>
+<a href="/" class="btn-exit">🚪 Abandonar Sala</a>
 
 <script>
     const salaCodigo = "{{ codigo }}";
     const jugadorUsername = "{{ username }}";
-    
-    // Configuración automática del protocolo de WebSocket según el entorno (WS o WSS)
+
+    // Configuración del WebSocket dinámico (local o SSL seguro en Render)
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const socket = new WebSocket(`${protocol}://${window.location.host}/ws/${salaCodigo}/${jugadorUsername}`);
 
-    const boardElement = document.getElementById("game-board");
+    const boardElement = document.getElementById("board");
     const statusMessage = document.getElementById("status-message");
 
     let miTurno = false;
-    let jugadorId = null; // Se asignará en la primera conexión (1 o 2)
-    let tablero = Array(6).fill(null).map(() => Array(7).fill(0)); // Tablero local de 6 filas x 7 columnas
+    let jugadorId = null;
+    let tablero = Array(6).fill(null).map(() => Array(7).fill(0));
 
-    // Crear visualmente las celdas en el HTML
+    // Crear la cuadrícula isométrica en el DOM
     function inicializarTableroVisual() {
         boardElement.innerHTML = "";
         for (let fila = 0; fila < 6; fila++) {
@@ -146,14 +260,13 @@
                 cell.classList.add("cell");
                 cell.dataset.fila = fila;
                 cell.dataset.col = col;
-                // Al dar clic en cualquier celda, intentamos colocar una ficha en esa columna
-                cell.addEventListener("click", () => realizarMovimiento(col));
+                cell.addEventListener("click", () => enviarMovimiento(col));
                 boardElement.appendChild(cell);
             }
         }
     }
 
-    // Dibujar el estado actual del tablero
+    // Dibujar el estado actual del tablero en base a la matriz del backend
     function actualizarTableroVisual() {
         const celdas = document.querySelectorAll(".cell");
         celdas.forEach(cell => {
@@ -161,7 +274,7 @@
             const c = parseInt(cell.dataset.col);
             const valor = tablero[f][c];
 
-            cell.className = "cell"; // Limpiar clases previas
+            cell.className = "cell";
             if (valor === 1) {
                 cell.classList.add("player-1");
             } else if (valor === 2) {
@@ -170,85 +283,107 @@
         });
     }
 
-    // Enviar columna seleccionada al servidor
-    function realizarMovimiento(columna) {
+    // Solicitar disparo de ficha en una columna al presionar un nodo
+    function enviarMovimiento(columna) {
         if (!miTurno) {
-            alert("¡No es tu turno! Espera el movimiento de tu rival.");
+            alert("¡Espera tu turno! No puedes mover ahora.");
             return;
         }
-
-        // Enviamos el movimiento en formato JSON al WebSocket
-        const datos = {
+        
+        socket.send(JSON.stringify({
             action: "move",
             col: columna,
             player: jugadorId
-        };
-        socket.send(JSON.stringify(datos));
+        }));
     }
 
-    // Escuchar respuestas del servidor en tiempo real
+    // Procesar eventos del servidor en tiempo real
     socket.onmessage = function(event) {
         const datos = JSON.parse(event.data);
 
-        // 1. Mensaje de bienvenida/inicialización
+        // Inicialización básica de la sesión
         if (datos.type === "init") {
             jugadorId = datos.player_id;
-            statusMessage.innerText = "🔌 Conectado. Esperando oponente...";
+            if (jugadorId === 1) {
+                document.getElementById("p1-name").innerText = `🔵 ${jugadorUsername}`;
+            }
         }
 
-        // 2. Comienzo o actualización del juego
+        // Actualización de estado del tablero y nombres de jugadores
         if (datos.type === "update") {
             tablero = datos.board;
             miTurno = (datos.turn === jugadorId);
             actualizarTableroVisual();
 
+            // Sincronizar nombres dinámicamente en los marcadores
+            if (datos.player1_name) {
+                document.getElementById("p1-name").innerText = `🔵 ${datos.player1_name}`;
+            }
+            if (datos.player2_name) {
+                document.getElementById("p2-name").innerText = `🔴 ${datos.player2_name}`;
+            } else {
+                document.getElementById("p2-name").innerText = "ESPERANDO...";
+            }
+
+            // Cambiar textos del panel superior central
             if (miTurno) {
-                statusMessage.innerText = "🟢 ¡Es tu turno! Elige una columna.";
+                statusMessage.innerText = "¡Tu turno!";
                 statusMessage.style.color = "#a6e3a1";
             } else {
-                statusMessage.innerText = "🔴 Esperando el turno de tu rival...";
+                statusMessage.innerText = "Turno del rival";
                 statusMessage.style.color = "#f38ba8";
             }
         }
 
-        // 3. Cuando finaliza la partida
+        // Caso: Fin de juego (Ganador / Empate)
         if (datos.type === "game_over") {
             tablero = datos.board;
             actualizarTableroVisual();
             miTurno = false;
 
             if (datos.winner === jugadorId) {
-                statusMessage.innerText = "🎉 ¡FELICIDADES! ¡HAS GANADO! 🏆";
+                statusMessage.innerText = "👑 ¡HAS GANADO!";
                 statusMessage.style.color = "#a6e3a1";
+                if (datos.winner === 1) {
+                    document.getElementById("p1-score").innerText = "1";
+                } else {
+                    document.getElementById("p2-score").innerText = "1";
+                }
             } else if (datos.winner === 0) {
-                statusMessage.innerText = "🤝 ¡Empate! Se llenó el tablero.";
+                statusMessage.innerText = "🤝 EMPATE";
                 statusMessage.style.color = "#f9e2af";
             } else {
-                statusMessage.innerText = "💥 Game Over. Tu oponente ha ganado.";
+                statusMessage.innerText = "💥 HAS PERDIDO";
                 statusMessage.style.color = "#f38ba8";
+                if (datos.winner === 1) {
+                    document.getElementById("p1-score").innerText = "1";
+                } else {
+                    document.getElementById("p2-score").innerText = "1";
+                }
             }
         }
 
-        // 4. Si el oponente se desconecta
+        // Caso: Oponente desconectado
         if (datos.type === "opponent_left") {
             miTurno = false;
-            statusMessage.innerText = "⚠️ Tu oponente se ha desconectado.";
+            statusMessage.innerText = "⚠️ OPONENTE DESCONECTADO";
             statusMessage.style.color = "#f9e2af";
+            document.getElementById("p2-name").innerText = "DESCONECTADO";
         }
     };
 
-    socket.onerror = function(error) {
-        console.error("Error en WebSocket: ", error);
-        statusMessage.innerText = "❌ Error de conexión con el servidor.";
+    socket.onerror = function(err) {
+        console.error("Error WebSocket:", err);
+        statusMessage.innerText = "❌ ERROR DE CONEXIÓN";
         statusMessage.style.color = "#f38ba8";
     };
 
     socket.onclose = function() {
-        statusMessage.innerText = "🔌 Conexión cerrada.";
+        statusMessage.innerText = "🔌 DESCONECTADO DEL SERVIDOR";
         statusMessage.style.color = "#7f849c";
     };
 
-    // Lanzamos la creación visual al cargar el archivo
+    // Lanzar construcción del tablero
     inicializarTableroVisual();
 </script>
 
