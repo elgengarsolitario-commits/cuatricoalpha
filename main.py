@@ -1,19 +1,46 @@
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import create_engine, Column, String, Integer
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import os
 import json
 
 app = FastAPI()
-
-# Configuramos la carpeta de plantillas (Jinja2)
 templates = Jinja2Templates(directory="templates")
 
-# Diccionario global para manejar las salas de juego
-# Estructura: { "codigo_sala": [websocket1, websocket2] }
+# ==========================================
+# 🗄️ CONFIGURACIÓN DE BASE DE DATOS (NEON)
+# ==========================================
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Si por alguna razón local no está configurada, usa un SQLite de respaldo
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./test.db"
+elif DATABASE_URL.startswith("postgres://"):
+    # Render y SQLAlchemy a veces requieren este cambio de protocolo
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Modelo de tabla para guardar los datos de los jugadores
+class Jugador(Base):
+    __tablename__ = "jugadores"
+    username = Column(String, primary_key=True, index=True)
+    puntos = Column(Integer, default=100)  # Empiezan con 100 puntos de base
+
+# Crear las tablas en Neon si no existen todavía
+Base.metadata.create_all(bind=engine)
+
+# ==========================================
+# 🎮 GESTIÓN DE SALAS DE JUEGO
+# ==========================================
 salas: dict[str, list[WebSocket]] = {}
 
 @app.get("/")
 async def get_lobby(request: Request):
-    # Carga la pantalla de inicio (Lobby)
     return templates.TemplateResponse(
         request=request,
         name="index.html"
@@ -21,13 +48,24 @@ async def get_lobby(request: Request):
 
 @app.get("/play/{codigo}/{username}")
 async def get_game(request: Request, codigo: str, username: str):
-    # Carga la pantalla de juego 3D con las variables de la sala
+    # Al entrar a jugar, registramos o buscamos al usuario en Neon para leer sus puntos
+    db = SessionLocal()
+    jugador = db.query(Jugador).filter(Jugador.username == username).first()
+    if not jugador:
+        jugador = Jugador(username=username, puntos=100)
+        db.add(jugador)
+        db.commit()
+        db.refresh(jugador)
+    puntos_actuales = jugador.puntos
+    db.close()
+
     return templates.TemplateResponse(
         request=request,
         name="game.html",
         context={
             "codigo": codigo,
-            "username": username
+            "username": username,
+            "puntos": puntos_actuales
         }
     )
 
@@ -35,11 +73,9 @@ async def get_game(request: Request, codigo: str, username: str):
 async def websocket_endpoint(websocket: WebSocket, codigo: str, username: str):
     await websocket.accept()
     
-    # Aseguramos que el código de la sala esté registrado
     if codigo not in salas:
         salas[codigo] = []
     
-    # Validamos que no entren más de 2 personas a la misma sala
     if len(salas[codigo]) >= 2:
         await websocket.send_text(json.dumps({
             "type": "error", 
@@ -48,41 +84,44 @@ async def websocket_endpoint(websocket: WebSocket, codigo: str, username: str):
         await websocket.close()
         return
 
-    # Añadimos la conexión del jugador a la sala
     salas[codigo].append(websocket)
-    print(f"Jugador {username} se unió a la sala '{codigo}'. Total: {len(salas[codigo])}")
+    print(f"Jugador {username} conectado a la sala '{codigo}'")
 
     try:
-        # Si ya se unieron los 2 jugadores, les mandamos la señal de inicio de partida
         if len(salas[codigo]) == 2:
-            # Mandamos mensaje a ambos para sincronizar el comienzo
             for index, ws in enumerate(salas[codigo]):
-                # El primero que entró es el creador (ficha roja), el segundo es el invitado (azul)
                 es_creador = (index == 0)
                 await ws.send_text(json.dumps({
                     "type": "start",
                     "rol": "creador" if es_creador else "invitado"
                 }))
 
-        # Escuchamos los movimientos del juego continuamente
         while True:
             data = await websocket.receive_text()
-            # Reenviamos el movimiento recibido al rival de la sala
+            # En caso de que se envíe una señal de fin de juego, podemos actualizar los puntos en Neon
+            mensaje = json.loads(data)
+            if mensaje.get("type") == "victory":
+                # Guardamos la victoria sumando puntos al ganador en base de datos
+                db = SessionLocal()
+                jugador = db.query(Jugador).filter(Jugador.username == username).first()
+                if jugador:
+                    jugador.puntos += 25  # Sumamos 25 puntos por ganar
+                    db.commit()
+                db.close()
+
+            # Reenviar el evento al rival
             for cliente in salas[codigo]:
                 if cliente != websocket:
                     await cliente.send_text(data)
 
     except WebSocketDisconnect:
-        # Manejamos la salida de un jugador de la sala
         if codigo in salas and websocket in salas[codigo]:
             salas[codigo].remove(websocket)
-            # Avisamos al rival que se quedó solo
             for cliente in salas[codigo]:
                 await cliente.send_text(json.dumps({
                     "type": "disconnection", 
-                    "message": "Tu rival se ha desconectado de la partida."
+                    "message": "Tu rival se ha desconectado."
                 }))
-            # Si la sala quedó vacía, la eliminamos para liberar memoria
             if not salas[codigo]:
                 del salas[codigo]
-        print(f"Jugador {username} se desconectó de la sala '{codigo}'")
+        print(f"Jugador {username} abandonó la sala '{codigo}'")
