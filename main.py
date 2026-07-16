@@ -1,12 +1,5 @@
-¡Claro que sí! Vamos a hacerlo súper sencillo. Te voy a dar los dos archivos completos de inicio a fin para que solo tengas que copiar, pegar y reemplazar todo el contenido en tu GitHub.
-
-🐍 1. Archivo main.py completo
-Reemplaza todo el contenido de tu archivo main.py actual con este código:
-
-Python
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 import json
 
 app = FastAPI()
