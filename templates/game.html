@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Partida: {{ codigo }} - Cuatrico</title>
+    <title>Cuadrados 3D - {{ codigo }}</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #1a1b26;
+            background-color: #0b0c10;
             color: #cdd6f4;
             display: flex;
             flex-direction: column;
@@ -19,7 +19,7 @@
             position: relative;
         }
 
-        /* Marcadores y Código de Sala superior */
+        /* Marcadores superiores */
         .game-header {
             position: absolute;
             top: 20px;
@@ -27,38 +27,36 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            pointer-events: none;
             z-index: 10;
         }
 
         .player-card {
-            background-color: rgba(49, 50, 68, 0.75);
-            border: 2px solid #45475a;
+            background-color: rgba(21, 23, 30, 0.85);
+            border: 2px solid #1f2833;
             border-radius: 12px;
-            padding: 15px 25px;
+            padding: 12px 20px;
             text-align: center;
-            width: 140px;
-            backdrop-filter: blur(5px);
+            width: 150px;
         }
 
         .player-card.azul {
-            border-color: #89b4fa;
-            box-shadow: 0 0 15px rgba(137, 180, 250, 0.3);
+            border-color: #45f3ff;
+            box-shadow: 0 0 15px rgba(69, 243, 255, 0.2);
         }
 
         .player-card.rojo {
-            border-color: #f38ba8;
-            box-shadow: 0 0 15px rgba(243, 139, 168, 0.3);
+            border-color: #ff4565;
+            box-shadow: 0 0 15px rgba(255, 69, 101, 0.2);
         }
 
         .player-name {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             display: block;
             margin-bottom: 5px;
-            text-overflow: ellipsis;
             white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .score {
@@ -66,143 +64,141 @@
             font-weight: 900;
         }
 
-        .azul .score { color: #89b4fa; }
-        .rojo .score { color: #f38ba8; }
+        .azul .score { color: #45f3ff; }
+        .rojo .score { color: #ff4565; }
 
-        .middle-info {
+        .room-info {
             text-align: center;
         }
 
-        .room-code-tag {
-            font-size: 11px;
-            letter-spacing: 2px;
-            color: #a6adc8;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .room-code-value {
+        .room-code-val {
             font-family: monospace;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #f9e2af;
-            background-color: rgba(49, 50, 68, 0.5);
-            padding: 5px 15px;
-            border-radius: 8px;
+            background: rgba(31, 40, 51, 0.6);
+            padding: 4px 12px;
+            border-radius: 6px;
             border: 1px dashed #f9e2af;
         }
 
-        /* Mensaje de Estado / Turno */
+        /* Estado del Turno */
         .status-box {
             position: absolute;
-            top: 130px;
-            background: rgba(49, 50, 68, 0.9);
-            padding: 10px 25px;
+            top: 120px;
+            background: rgba(21, 23, 30, 0.9);
+            padding: 8px 20px;
             border-radius: 20px;
-            font-size: 16px;
-            font-weight: bold;
-            letter-spacing: 1.5px;
-            color: #f9e2af;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            text-transform: uppercase;
-            z-index: 10;
-        }
-
-        /* PERSPECTIVA Y ENTORNO DEL TABLERO */
-        .scene {
-            perspective: 800px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 80px;
-        }
-
-        /* El tablero en inclinación isométrica similar al tuyo */
-        .board-3d {
-            transform: rotateX(45deg) rotateZ(0deg);
-            transform-style: preserve-3d;
-            background-color: rgba(30, 30, 46, 0.85);
-            border: 4px solid #313244;
-            border-radius: 16px;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: repeat(7, 50px);
-            grid-template-rows: repeat(6, 50px);
-            gap: 15px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        /* Celdas / Nodos interconectados */
-        .cell {
-            background-color: rgba(49, 50, 68, 0.6);
-            border-radius: 50%;
-            cursor: pointer;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Líneas conectoras simuladas por detrás (Efecto de red) */
-        .cell::before {
-            content: "";
-            position: absolute;
-            width: 200%;
-            height: 2px;
-            background: rgba(69, 71, 90, 0.35);
-            z-index: -1;
-            transform: translateZ(-2px);
-        }
-
-        .cell::after {
-            content: "";
-            position: absolute;
-            width: 2px;
-            height: 200%;
-            background: rgba(69, 71, 90, 0.35);
-            z-index: -1;
-            transform: translateZ(-2px);
-        }
-
-        .cell:hover {
-            background-color: rgba(137, 180, 250, 0.25);
-            box-shadow: 0 0 10px rgba(137, 180, 250, 0.5);
-        }
-
-        /* Animaciones para las fichas que caen */
-        .cell.player-1 {
-            background-color: #89b4fa; /* Color Azul */
-            box-shadow: 0 0 15px #89b4fa, inset 0 0 10px rgba(0, 0, 0, 0.5);
-            transform: translateZ(10px);
-        }
-
-        .cell.player-2 {
-            background-color: #f38ba8; /* Color Rojo */
-            box-shadow: 0 0 15px #f38ba8, inset 0 0 10px rgba(0, 0, 0, 0.5);
-            transform: translateZ(10px);
-        }
-
-        /* Botón de salida */
-        .btn-exit {
-            position: absolute;
-            bottom: 30px;
-            background-color: #313244;
-            color: #cdd6f4;
-            border: 1px solid #45475a;
-            padding: 10px 25px;
-            border-radius: 8px;
             font-size: 14px;
             font-weight: bold;
+            letter-spacing: 1px;
+            z-index: 10;
+            border: 1px solid #1f2833;
+        }
+
+        /* PERSPECTIVA ISOMÉTRICA */
+        .scene {
+            perspective: 1000px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 60px;
+        }
+
+        /* Tablero rotado */
+        .board-3d {
+            transform: rotateX(50deg) rotateZ(-45deg);
+            transform-style: preserve-3d;
+            width: 320px;
+            height: 320px;
+            position: relative;
+            background-color: rgba(15, 18, 26, 0.9);
+            border-radius: 12px;
+            box-shadow: 20px 20px 50px rgba(0,0,0,0.7);
+        }
+
+        /* PUNTOS (Nodos) */
+        .point {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%) translateZ(10px);
+            box-shadow: 0 0 8px #ffffff;
+            z-index: 5;
+        }
+
+        /* PALITOS / LÍNEAS INTERACTIVAS */
+        .line {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.05);
             cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+            transform-style: preserve-3d;
+            transform-origin: left center;
+            z-index: 4;
+        }
+
+        /* Previsualización al pasar el mouse por encima */
+        .line:not(.active):hover {
+            background-color: rgba(255, 255, 255, 0.35);
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Palito ya colocado */
+        .line.active.p1 {
+            background-color: #45f3ff;
+            box-shadow: 0 0 12px #45f3ff;
+            transform: translateZ(6px);
+        }
+
+        .line.active.p2 {
+            background-color: #ff4565;
+            box-shadow: 0 0 12px #ff4565;
+            transform: translateZ(6px);
+        }
+
+        /* CAPAS DE LOS CUADRADOS CONQUISTADOS */
+        .square-fill {
+            position: absolute;
+            width: 68px;
+            height: 68px;
+            opacity: 0;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            transform: translateZ(2px);
+            pointer-events: none;
+        }
+
+        .square-fill.p1 {
+            background: radial-gradient(circle, rgba(69, 243, 255, 0.4) 0%, rgba(69, 243, 255, 0.05) 80%);
+            opacity: 1;
+            transform: translateZ(4px);
+        }
+
+        .square-fill.p2 {
+            background: radial-gradient(circle, rgba(255, 69, 101, 0.4) 0%, rgba(255, 69, 101, 0.05) 80%);
+            opacity: 1;
+            transform: translateZ(4px);
+        }
+
+        .btn-exit {
+            position: absolute;
+            bottom: 25px;
+            background-color: #15171e;
+            color: #cdd6f4;
+            border: 1px solid #1f2833;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
             text-decoration: none;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
         .btn-exit:hover {
-            background-color: #f38ba8;
-            color: #11111b;
+            background-color: #ff4565;
+            color: #0b0c10;
         }
     </style>
 </head>
@@ -214,9 +210,9 @@
         <div class="score" id="p1-score">0</div>
     </div>
 
-    <div class="middle-info">
-        <span class="room-code-tag">CÓDIGO DE LA PARTIDA</span>
-        <span class="room-code-value" id="room-code">{{ codigo }}</span>
+    <div class="room-info">
+        <div style="font-size: 10px; color: #8892b0; margin-bottom: 2px;">SALA</div>
+        <span class="room-code-val">{{ codigo }}</span>
     </div>
 
     <div class="player-card rojo">
@@ -225,7 +221,7 @@
     </div>
 </div>
 
-<div class="status-box" id="status-message">
+<div class="status-box" id="status-message" style="color: #f9e2af;">
     ESPERANDO OPONENTE...
 </div>
 
@@ -240,7 +236,6 @@
     const salaCodigo = "{{ codigo }}";
     const jugadorUsername = "{{ username }}";
 
-    // Configuración del WebSocket dinámico (local o SSL seguro en Render)
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const socket = new WebSocket(`${protocol}://${window.location.host}/ws/${salaCodigo}/${jugadorUsername}`);
 
@@ -249,59 +244,93 @@
 
     let miTurno = false;
     let jugadorId = null;
-    let tablero = Array(6).fill(null).map(() => Array(7).fill(0));
 
-    // Crear la cuadrícula isométrica en el DOM
-    function inicializarTableroVisual() {
+    // Grid de 5x5 puntos espaciados cada 80px (Tablero de 320x320)
+    const espaciado = 80;
+
+    function renderizarTablero() {
         boardElement.innerHTML = "";
-        for (let fila = 0; fila < 6; fila++) {
-            for (let col = 0; col < 7; col++) {
-                const cell = document.createElement("div");
-                cell.classList.add("cell");
-                cell.dataset.fila = fila;
-                cell.dataset.col = col;
-                cell.addEventListener("click", () => enviarMovimiento(col));
-                boardElement.appendChild(cell);
+
+        // 1. Dibujar los 25 Puntos (Nodos)
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                const punto = document.createElement("div");
+                punto.classList.add("point");
+                punto.style.top = `${r * espaciado}px`;
+                punto.style.left = `${c * espaciado}px`;
+                boardElement.appendChild(punto);
+            }
+        }
+
+        // 2. Crear las Líneas Horizontales interactivos (5 filas x 4 columnas)
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 4; c++) {
+                const linea = document.createElement("div");
+                linea.classList.add("line");
+                linea.id = `line-H-${r}-${c}`;
+                
+                // Posicionar y dimensionar
+                linea.style.top = `${r * espaciado - 4}px`;
+                linea.style.left = `${c * espaciado}px`;
+                linea.style.width = `${espaciado}px`;
+                linea.style.height = `8px`;
+                
+                linea.addEventListener("click", () => intentarColocarLinea("H", r, c));
+                boardElement.appendChild(linea);
+            }
+        }
+
+        // 3. Crear las Líneas Verticales interactivos (4 filas x 5 columnas)
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 5; c++) {
+                const linea = document.createElement("div");
+                linea.classList.add("line");
+                linea.id = `line-V-${r}-${c}`;
+                
+                // Posicionar y dimensionar
+                linea.style.top = `${r * espaciado}px`;
+                linea.style.left = `${c * espaciado - 4}px`;
+                linea.style.width = `8px`;
+                linea.style.height = `${espaciado}px`;
+                
+                linea.addEventListener("click", () => intentarColocarLinea("V", r, c));
+                boardElement.appendChild(linea);
+            }
+        }
+
+        // 4. Crear los Cuadrados conquistados (4x4) invisibles al inicio
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                const sq = document.createElement("div");
+                sq.classList.add("square-fill");
+                sq.id = `sq-${r}-${c}`;
+                
+                // Centrado dentro de su cuadrante de 80x80
+                sq.style.top = `${r * espaciado + 6}px`;
+                sq.style.left = `${c * espaciado + 6}px`;
+                boardElement.appendChild(sq);
             }
         }
     }
 
-    // Dibujar el estado actual del tablero en base a la matriz del backend
-    function actualizarTableroVisual() {
-        const celdas = document.querySelectorAll(".cell");
-        celdas.forEach(cell => {
-            const f = parseInt(cell.dataset.fila);
-            const c = parseInt(cell.dataset.col);
-            const valor = tablero[f][c];
-
-            cell.className = "cell";
-            if (valor === 1) {
-                cell.classList.add("player-1");
-            } else if (valor === 2) {
-                cell.classList.add("player-2");
-            }
-        });
-    }
-
-    // Solicitar disparo de ficha en una columna al presionar un nodo
-    function enviarMovimiento(columna) {
+    function intentarColocarLinea(tipo, r, c) {
         if (!miTurno) {
-            alert("¡Espera tu turno! No puedes mover ahora.");
+            alert("No es tu turno de colocar una línea.");
             return;
         }
         
         socket.send(JSON.stringify({
-            action: "move",
-            col: columna,
+            action: "colocar_linea",
+            tipo: tipo,
+            r: r,
+            c: c,
             player: jugadorId
         }));
     }
 
-    // Procesar eventos del servidor en tiempo real
     socket.onmessage = function(event) {
         const datos = JSON.parse(event.data);
 
-        // Inicialización básica de la sesión
         if (datos.type === "init") {
             jugadorId = datos.player_id;
             if (jugadorId === 1) {
@@ -309,82 +338,95 @@
             }
         }
 
-        // Actualización de estado del tablero y nombres de jugadores
-        if (datos.type === "update") {
-            tablero = datos.board;
+        if (datos.type === "update" || datos.type === "game_over") {
             miTurno = (datos.turn === jugadorId);
-            actualizarTableroVisual();
 
-            // Sincronizar nombres dinámicamente en los marcadores
-            if (datos.player1_name) {
-                document.getElementById("p1-name").innerText = `🔵 ${datos.player1_name}`;
-            }
+            // Actualizar Marcadores
+            document.getElementById("p1-score").innerText = datos.puntos_p1;
+            document.getElementById("p2-score").innerText = datos.puntos_p2;
+
+            if (datos.player1_name) document.getElementById("p1-name").innerText = `🔵 ${datos.player1_name}`;
             if (datos.player2_name) {
                 document.getElementById("p2-name").innerText = `🔴 ${datos.player2_name}`;
             } else {
                 document.getElementById("p2-name").innerText = "ESPERANDO...";
             }
 
-            // Cambiar textos del panel superior central
-            if (miTurno) {
-                statusMessage.innerText = "¡Tu turno!";
-                statusMessage.style.color = "#a6e3a1";
+            // Pintar Líneas Horizontales colocadas
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const status = datos.horizontales[r][c];
+                    const el = document.getElementById(`line-H-${r}-${c}`);
+                    if (status && el && !el.classList.contains("active")) {
+                        el.classList.add("active");
+                        // Aquí idealmente sabríamos quién la pintó, para efectos simples
+                        // podemos usar el turno inverso o dejar que se actualice según el flujo
+                        el.classList.add(datos.turn === 2 ? "p1" : "p2");
+                    }
+                }
+            }
+
+            // Pintar Líneas Verticales colocadas
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const status = datos.verticales[r][c];
+                    const el = document.getElementById(`line-V-${r}-${c}`);
+                    if (status && el && !el.classList.contains("active")) {
+                        el.classList.add("active");
+                        el.classList.add(datos.turn === 2 ? "p1" : "p2");
+                    }
+                }
+            }
+
+            // Pintar Cuadrados conquistados
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const dueño = datos.cuadrados[r][c];
+                    const el = document.getElementById(`sq-${r}-${c}`);
+                    if (dueño !== 0 && el) {
+                        el.className = "square-fill " + (dueño === 1 ? "p1" : "p2");
+                    }
+                }
+            }
+
+            // Mensajes de Turno / Fin
+            if (datos.type === "game_over") {
+                miTurno = false;
+                if (datos.winner === jugadorId) {
+                    statusMessage.innerText = "👑 ¡VICTORIA!";
+                    statusMessage.style.color = "#45f3ff";
+                } else if (datos.winner === 0) {
+                    statusMessage.innerText = "🤝 EMPATE";
+                    statusMessage.style.color = "#f9e2af";
+                } else {
+                    statusMessage.innerText = "💥 DERROTA";
+                    statusMessage.style.color = "#ff4565";
+                }
             } else {
-                statusMessage.innerText = "Turno del rival";
-                statusMessage.style.color = "#f38ba8";
+                if (miTurno) {
+                    statusMessage.innerText = "🟢 TU TURNO (Coloca un palito)";
+                    statusMessage.style.color = "#45f3ff";
+                } else {
+                    statusMessage.innerText = "🔴 TURNO DEL RIVAL";
+                    statusMessage.style.color = "#ff4565";
+                }
             }
         }
 
-        // Caso: Fin de juego (Ganador / Empate)
-        if (datos.type === "game_over") {
-            tablero = datos.board;
-            actualizarTableroVisual();
-            miTurno = false;
-
-            if (datos.winner === jugadorId) {
-                statusMessage.innerText = "👑 ¡HAS GANADO!";
-                statusMessage.style.color = "#a6e3a1";
-                if (datos.winner === 1) {
-                    document.getElementById("p1-score").innerText = "1";
-                } else {
-                    document.getElementById("p2-score").innerText = "1";
-                }
-            } else if (datos.winner === 0) {
-                statusMessage.innerText = "🤝 EMPATE";
-                statusMessage.style.color = "#f9e2af";
-            } else {
-                statusMessage.innerText = "💥 HAS PERDIDO";
-                statusMessage.style.color = "#f38ba8";
-                if (datos.winner === 1) {
-                    document.getElementById("p1-score").innerText = "1";
-                } else {
-                    document.getElementById("p2-score").innerText = "1";
-                }
-            }
-        }
-
-        // Caso: Oponente desconectado
         if (datos.type === "opponent_left") {
             miTurno = false;
-            statusMessage.innerText = "⚠️ OPONENTE DESCONECTADO";
-            statusMessage.style.color = "#f9e2af";
+            statusMessage.innerText = "⚠️ RIVAL SE DESCONECTÓ";
+            statusMessage.style.color = "#ff4565";
             document.getElementById("p2-name").innerText = "DESCONECTADO";
         }
     };
 
-    socket.onerror = function(err) {
-        console.error("Error WebSocket:", err);
-        statusMessage.innerText = "❌ ERROR DE CONEXIÓN";
-        statusMessage.style.color = "#f38ba8";
+    socket.onerror = () => {
+        statusMessage.innerText = "❌ ERROR EN SERVIDOR";
+        statusMessage.style.color = "#ff4565";
     };
 
-    socket.onclose = function() {
-        statusMessage.innerText = "🔌 DESCONECTADO DEL SERVIDOR";
-        statusMessage.style.color = "#7f849c";
-    };
-
-    // Lanzar construcción del tablero
-    inicializarTableroVisual();
+    renderizarTablero();
 </script>
 
 </body>
